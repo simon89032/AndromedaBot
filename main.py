@@ -1,11 +1,12 @@
 import discord
 from discord.ext import commands, tasks
 import asyncio
-import time
-import logging
-from datetime import datetime, timezone, timedelta
-
+from datetime import datetime
+import requests
+from keep_alive import keep_alive
+import os
 import pytz
+
 desired_timezone = pytz.timezone('Europe/Sofia')
 
 intents = discord.Intents.default()
@@ -16,31 +17,20 @@ bot = commands.Bot(command_prefix='$', intents=intents)
 
 voice_channel_id = 1147642751337377963
 voice_channel_id_date = 1147635201145589941
+log_channel_id = 1048179434517176340
 
 original_permissions = {}
-target_text_channel_id = 1048179434517176340
-log_channel_id = 1048179434517176340
 
 hours = 0
 minutes = 0
 seconds = 0
 
-info_logger = logging.getLogger('info_logger')
-info_logger.setLevel(logging.INFO)
+async def log_to_discord(channel_id, message):
+    channel = bot.get_channel(channel_id)
+    if channel:
+        await channel.send(message)
 
-warning_logger = logging.getLogger('warning_logger')
-warning_logger.setLevel(logging.WARNING)
-
-info_handler = logging.FileHandler('info.log')
-warning_handler = logging.FileHandler('warning.log')
-
-formatter = logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s')
-
-info_handler.setFormatter(formatter)
-warning_handler.setFormatter(formatter)
-
-info_logger.addHandler(info_handler)
-warning_logger.addHandler(warning_handler)
+keep_alive()
 
 @tasks.loop(hours=24)
 async def update_date():
@@ -52,12 +42,12 @@ async def update_date():
         new_name_date = f"{current_date}"
         try:
             await voice_channel_date.edit(name=new_name_date)
-            info_logger.info(f'Voice channel name updated to "{new_name_date}"')
+            await log_to_discord(log_channel_id, f'Voice channel name updated to "{new_name_date}"')
         except discord.HTTPException as e:
             if "rate limited" in str(e).lower():
-                warning_logger.warning('Rate limit exceeded while updating date channel name. Waiting...')
+                await log_to_discord(log_channel_id, 'Rate limit exceeded while updating date channel name. Waiting...')
             else:
-                warning_logger.error(f'An error occurred while updating date channel name: {e}')
+                await log_to_discord(log_channel_id, f'An error occurred while updating date channel name: {e}')
 
 @tasks.loop(minutes=5) 
 async def update_time():
@@ -69,12 +59,12 @@ async def update_time():
         new_name_time = f"Server Time: {current_time}"
         try:
             await voice_channel_time.edit(name=new_name_time)
-            info_logger.info(f'Voice channel name updated to "{new_name_time}"')
+            await log_to_discord(log_channel_id, f'Voice channel name updated to "{new_name_time}"')
         except discord.HTTPException as e:
             if "rate limited" in str(e).lower():
-                warning_logger.warning('Rate limit exceeded while updating time channel name. Waiting...')
+                await log_to_discord(log_channel_id, 'Rate limit exceeded while updating time channel name. Waiting...')
             else:
-                warning_logger.error(f'An error occurred while updating time channel name: {e}')
+                await log_to_discord(log_channel_id, f'An error occurred while updating time channel name: {e}')
 
 @update_date.before_loop
 async def before_update_date():
@@ -86,16 +76,33 @@ async def before_update_time():
 
 @bot.event
 async def on_ready():
-    info_logger.info(f'Logged in as {bot.user.name} ({bot.user.id})')
+    await log_to_discord(log_channel_id, f'Logged in as {bot.user.name} ({bot.user.id})')
     update_date.start()
     update_time.start()
+    await send_alive_message()
 
-lockdowned_role_names = ["Guild Members", "Приятели", "Shadow Family", "Talker", "Helpers"]
+lockdowned_role_names = ["Guild Members", "Members", "Shadow Family", "Talker", "Helpers"]
+
+async def on_error(event, *args, **kwargs):
+    print(f"An error occurred in event {event}: {args[0]}")
+  
+async def send_alive_message():
+    await bot.wait_until_ready()
+    guild = bot.get_guild(1038062520512040993)
+    channel = guild.get_channel(log_channel_id)
+
+    while True:
+        response = requests.get("https://python-test-bot.simeonmladenov.repl.co?")
+
+        if response.status_code == 200:
+            await channel.send("Bot is alive bitch!")
+        else:
+            await channel.send("Bot may not be running.")
+
+        await asyncio.sleep(300)
 
 @bot.command()
 async def lockdown(ctx):
-    log_message = None
-
     if ctx.author.guild_permissions.administrator:
         for role in ctx.guild.roles:
             if role.name != "@everyone":
@@ -109,21 +116,14 @@ async def lockdown(ctx):
                 if role.name in lockdowned_role_names:
                     await role.edit(permissions=perms)
 
-        log_message = "Server is now locked down. Permissions have been modified."
+                log_message = f"{ctx.author.name} used lockdown command."
+        await ctx.send(log_message)
     else:
-        log_message = "Only an admin can use this command to lock down the server."
-
-    log_message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {log_message}"
-
-    with open('chat.log', 'a') as log_file:
-        log_file.write(log_message + '\n')
-
-    await ctx.send(log_message)
+        log_message = "Only the server owner can use this command to lock down the server."
+        await ctx.send(log_message)
 
 @bot.command()
 async def unlockdown(ctx):
-    log_message = None
-
     if ctx.author.guild_permissions.administrator:
         for role in ctx.guild.roles:
             if role.name != "@everyone":
@@ -137,16 +137,12 @@ async def unlockdown(ctx):
                 if role.name in lockdowned_role_names:
                     await role.edit(permissions=perms)
 
-        log_message = "Server is unlocked. Permissions are reverted back."
+                log_message = "Server is unlocked. Permissions are reverted back."
+        await ctx.send(log_message)
     else:
-        log_message = "Only an admin can use this command to lock down the server."
+        log_message = "Only the server owner can use this command to unlockdown the server."
+        await ctx.send(log_message)
 
-    log_message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {log_message}"
-
-    with open('chat.log', 'a') as log_file:
-        log_file.write(log_message + '\n')
-
-    await ctx.send(log_message)
 
 @bot.event
 async def on_voice_state_update(member, before, after):
@@ -160,24 +156,23 @@ async def on_voice_state_update(member, before, after):
 
         if log_message:
             log_message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {log_message}"
-            with open('chat.log', 'a') as log_file:
-                log_file.write(log_message + '\n')
+            await log_to_discord(log_channel_id, log_message)  
 
 @bot.event
 async def on_message_delete(message):
     if message.attachments:
         for attachment in message.attachments:
             log_message = f"Deleted Image from {message.author}: {attachment.url}"
-            with open('chat.log', 'a') as log_file:
-                log_file.write(log_message + '\n')
+            await log_to_discord(log_channel_id, log_message) 
 
     if message.content:
         log_message = f"Deleted Message from {message.author}: {message.content}"
-        with open('chat.log', 'a') as log_file:
-            log_file.write(log_message + '\n')
+        await log_to_discord(log_channel_id, log_message) 
+
+api_secret = os.environ['api']
 
 async def main():
-    await bot.start("")
+    await bot.start(api_secret)
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
