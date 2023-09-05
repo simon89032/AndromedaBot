@@ -1,0 +1,10 @@
+{                                                                                                      
+  "name": "PythonBotDC",                                                                             
+  "description": "Simo Discord Python Bot",                                                                  
+  "version": "0.0.4",
+  "packages": [
+    {
+        "name": "requests",
+        "version": "2.26.0"
+    }                      
+}
