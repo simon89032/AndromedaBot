@@ -7,16 +7,12 @@
 
 Basic functionality: lockdown server and unlockdown, server timer(date and time) and deleted messages(text and photos)
 
-<<<<<<< HEAD
 **V0.0.9**:
 - added the day of the month in the date_channel
 - added some comments
 - fixed the timestamps of the deleted messages method
 
 **V0.0.8**:
-=======
-**0.0.8**:
->>>>>>> 5d9a71c12f440457c810cf130f57ad2f5ed9136b
 - reworked update_date to bulgarian language
 - fixed some bugs
 
