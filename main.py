@@ -6,6 +6,9 @@ import requests
 import pytz
 import logging
 
+### SIMPLE BOT ### 
+# NOT READY FOR DEPLOYMENT #
+
 desired_timezone = pytz.timezone('Europe/Sofia')
 
 intents = discord.Intents.all()
@@ -20,7 +23,7 @@ voice_channel_id_date = 1147635201145589941
 log_channel_id = 1148562977272905761
 
 original_permissions = {}
-lockdowned_role_names = ["Guild Members", "Members", "Shadow Family", "Talker", "Helpers", "LoL", "DsO", "GTA", "Paladins", "Valorant"]
+lockdowned_role_names = ["User"]
 
 ### main log ###
 bot_logger = logging.getLogger('bot')
