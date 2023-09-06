@@ -1,5 +1,6 @@
 {                                                                                                      
   "name": "Python Discord Bot",                                                                             
   "description": "Simo Discord Python Bot",                                                                  
-  "version": "0.0.5"                  
+  "version": "0.0.7",
+  "date": "09/06/2023"                  
 }

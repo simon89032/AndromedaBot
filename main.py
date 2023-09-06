@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands, tasks
-from keep_alive import keep_alive
 import asyncio
 from datetime import datetime
 import requests
@@ -10,8 +9,6 @@ import logging
 import sys
 
 desired_timezone = pytz.timezone('Europe/Sofia')
-voice_channel_id_time = 1147642751337377963
-voice_channel_id_date = 1147635201145589941
 
 intents = discord.Intents.all()
 intents.members = True
@@ -20,20 +17,21 @@ intents.presences = False
 
 bot = commands.Bot(command_prefix='$', intents=intents)
 
-log_channel_id = 1048179434517176340
+voice_channel_id_date = 1149051777728122971
+log_channel_id = 1148562977272905761
 
 original_permissions = {}
 lockdowned_role_names = ["Guild Members", "Members", "Shadow Family", "Talker", "Helpers", "LoL", "DsO", "GTA", "Paladins", "Valorant"]
 
 ### main log ###
-bot_logger = logging.getLogger('discord_bot')
+bot_logger = logging.getLogger('bot')
 bot_logger.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler('log.txt')
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
+# Create a handler for the logger with the specified encoding
+log_handler = logging.FileHandler('bot.log', encoding='utf-8')  # Use 'utf-8' encoding
+log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+bot_logger.addHandler(log_handler)
 
-bot_logger.addHandler(file_handler)
 
 ### rate limit ###
 rate_limit_logger = logging.getLogger('rate_limit')
@@ -55,7 +53,7 @@ async def log_to_discord(channel_id, message):
 @bot.command()
 async def test(ctx):
     bot_logger.warning("test")
-
+    
 @bot.event
 async def on_ready():
     await log_to_discord(log_channel_id, f'Logged in as {bot.user.name} ({bot.user.id})')
@@ -63,6 +61,42 @@ async def on_ready():
     update_time.start()
     await send_alive_message()
 
+@tasks.loop(hours=1)  # Update every hour
+async def update_date():
+    current_datetime = datetime.now(desired_timezone)
+
+    # Define mappings for English to Bulgarian
+    days_mapping = {"Monday": "Понеделник", "Tuesday": "Вторник", "Wednesday": "Сряда", "Thursday": "Четвъртък",
+                    "Friday": "Петък", "Saturday": "Събота", "Sunday": "Неделя"}
+
+    months_mapping = {"January": "Януари", "February": "Февруари", "March": "Март", "April": "Април", "May": "Май",
+                      "June": "Юни", "July": "Юли", "August": "Август", "September": "Сеп", "October": "Окт",
+                      "November": "Ноем", "December": "Дек"}
+
+    voice_channel_date = bot.get_channel(voice_channel_id_date)
+
+    if voice_channel_date and isinstance(voice_channel_date, discord.VoiceChannel):
+        english_day = current_datetime.strftime('%A')
+        english_month = current_datetime.strftime('%B')
+        year = current_datetime.year
+
+        bulgarian_day = days_mapping.get(english_day, english_day)
+        bulgarian_month = months_mapping.get(english_month, english_month)
+
+        # Abbreviate September, October, November, and December
+        if bulgarian_month in ["Септември", "Октомври", "Ноември", "Декември"]:
+            bulgarian_month = bulgarian_month[:4]
+
+        new_name_date = f"{bulgarian_day}, {bulgarian_month} {year}г"
+
+        try:
+            await voice_channel_date.edit(name=new_name_date)
+            bot_logger.info(f'Voice channel name updated to "{new_name_date}"')
+        except discord.HTTPException as e:
+            log_message = 'Rate limit exceeded while updating date channel name. Waiting...' if "rate limited" in str(e).lower() else f'Error updating date channel name: {e}'
+            rate_limit_logger.warning(log_message)
+
+                
 async def send_alive_message():
     await bot.wait_until_ready()
     guild = bot.get_guild(1038062520512040993)
@@ -141,31 +175,6 @@ async def on_message_delete(message):
     if message.content:
         log_message = f"Deleted Message from {message.author}: {message.content}"
         await log_to_discord(log_channel_id, log_message) 
-
-@tasks.loop(hours=24)
-async def update_date():
-    current_date = datetime.now(desired_timezone).strftime('%A, %b %d')
-
-    voice_channel_date = bot.get_channel(voice_channel_id_date)
-
-    if voice_channel_date and isinstance(voice_channel_date, discord.VoiceChannel):
-        new_name_date = f"{current_date}"
-        try:
-            await voice_channel_date.edit(name=new_name_date)
-
-            log_message =  f'Voice channel name date updated to "{new_name_date}"'
-            bot_logger.info(log_message)
-        except discord.HTTPException as e:
-            if "rate limited" in str(e).lower():
-                log_message_rate = 'Rate limit exceeded while updating date channel name. Waiting...'
-                rate_limit_logger.warning(log_message_rate)
-            else:
-                log_message_error = f'An error occurred while updating date channel name: {e}'
-                bot_logger.error(log_message_error)                
-    
-def log_rate_limit(message):
-    with open('rate_limit_log.txt', 'a') as log_file:
-        log_file.write(f'{datetime.now()} - {message}\n')
 
 @tasks.loop(minutes=5)
 async def update_time():
