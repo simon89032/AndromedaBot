@@ -1,12 +1,13 @@
 import discord
 from discord.ext import commands, tasks
+from keep_alive import keep_alive
 import asyncio
 from datetime import datetime
-from keep_alive import keep_alive
 import requests
 import os
 import pytz
 import logging
+import sys
 
 desired_timezone = pytz.timezone('Europe/Sofia')
 voice_channel_id_time = 1147642751337377963
@@ -24,21 +25,58 @@ log_channel_id = 1048179434517176340
 original_permissions = {}
 lockdowned_role_names = ["Guild Members", "Members", "Shadow Family", "Talker", "Helpers", "LoL", "DsO", "GTA", "Paladins", "Valorant"]
 
-keep_alive()
+### main log ###
+bot_logger = logging.getLogger('discord_bot')
+bot_logger.setLevel(logging.INFO)
 
-logging.basicConfig(filename='rate_limit.log', level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+file_handler = logging.FileHandler('log.txt')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+
+bot_logger.addHandler(file_handler)
+
+### rate limit ###
+rate_limit_logger = logging.getLogger('rate_limit')
+rate_limit_logger.setLevel(logging.WARNING)
+
+rate_limit_file_handler = logging.FileHandler('log_rate_limit.txt')
+rate_limit_file_handler.setLevel(logging.WARNING)
+
+rate_limit_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+rate_limit_file_handler.setFormatter(rate_limit_formatter)
+
+rate_limit_logger.addHandler(rate_limit_file_handler)
 
 async def log_to_discord(channel_id, message):
     channel = bot.get_channel(channel_id)
     if channel:
         await channel.send(message)
 
+@bot.command()
+async def test(ctx):
+    bot_logger.warning("test")
+
 @bot.event
 async def on_ready():
     await log_to_discord(log_channel_id, f'Logged in as {bot.user.name} ({bot.user.id})')
     update_date.start()
     update_time.start()
+    await send_alive_message()
+
+async def send_alive_message():
+    await bot.wait_until_ready()
+    guild = bot.get_guild(1038062520512040993)
+    channel = guild.get_channel(log_channel_id)
+
+    while True:
+        response = requests.get("https://andromeda.simeonmladenov.repl.co/")
+
+        if response.status_code == 200:
+            await channel.send("Bot is alive bitch!")
+        else:
+            await channel.send("Bot may not be running.")
+
+        await asyncio.sleep(600)
 
 @bot.command()
 async def lockdown(ctx):
@@ -58,7 +96,6 @@ async def lockdown(ctx):
         await log_to_discord(log_channel_id, f"{ctx.author.name} used lockdown command.")
     else:
         await log_to_discord(log_channel_id, "Only the server owner can use this command to lock down the server.")
-
 
 @bot.command()
 async def unlockdown(ctx):
@@ -105,8 +142,6 @@ async def on_message_delete(message):
         log_message = f"Deleted Message from {message.author}: {message.content}"
         await log_to_discord(log_channel_id, log_message) 
 
-
-
 @tasks.loop(hours=24)
 async def update_date():
     current_date = datetime.now(desired_timezone).strftime('%A, %b %d')
@@ -117,13 +152,17 @@ async def update_date():
         new_name_date = f"{current_date}"
         try:
             await voice_channel_date.edit(name=new_name_date)
-            await log_to_discord(log_channel_id, f'Voice channel name updated to "{new_name_date}"')
+
+            log_message =  f'Voice channel name date updated to "{new_name_date}"'
+            bot_logger.info(log_message)
         except discord.HTTPException as e:
             if "rate limited" in str(e).lower():
-                await log_to_discord(log_channel_id, 'Rate limit exceeded while updating date channel name. Waiting...')
+                log_message_rate = 'Rate limit exceeded while updating date channel name. Waiting...'
+                rate_limit_logger.warning(log_message_rate)
             else:
-                await log_to_discord(log_channel_id, f'An error occurred while updating date channel name: {e}')
-
+                log_message_error = f'An error occurred while updating date channel name: {e}'
+                bot_logger.error(log_message_error)                
+    
 def log_rate_limit(message):
     with open('rate_limit_log.txt', 'a') as log_file:
         log_file.write(f'{datetime.now()} - {message}\n')
@@ -139,17 +178,15 @@ async def update_time():
             new_name_time = f"Server Time: {current_time}"
             await voice_channel_time.edit(name=new_name_time)
             log_message = f'Voice channel name updated to "{new_name_time}"'
-            await log_to_discord(log_channel_id, log_message)
-            logging.info(log_message)
+            bot_logger.info(log_message)
 
     except discord.HTTPException as e:
         if e.status == 429:
-            log_message = f'Rate limit exceeded. Exception: {e}'
-            logging.warning(log_message)
+            log_message_rate = f'Rate limit exceeded. Exception: {e}'
+            rate_limit_logger.warning(log_message_rate)
         else:
-            log_message = f'An error occurred while updating time channel name: {e}'
-            await log_to_discord(log_channel_id, log_message)
-            logging.error(log_message)
+            log_message_error = f'An error occurred while updating time channel name: {e}'            
+            bot_logger.error(log_message_error)
 
 @update_date.before_loop
 async def before_update_date():
@@ -158,6 +195,9 @@ async def before_update_date():
 @update_time.before_loop
 async def before_update_time():
     await bot.wait_until_ready()
+
+
+keep_alive()
 
 api_secret = os.environ['api']
 
