@@ -7,6 +7,10 @@
 
 Basic functionality: lockdown server and unlockdown, server timer(date and time) and deleted messages(text and photos)
 
+**0.0.8**:
+- reworked update_date to bulgarian language
+- fixed some bugs
+
 **V0.0.6 added:**
 - separate log files for methods: update_time; update_date
 - sample $test command with output in log.txt
