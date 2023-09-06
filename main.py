@@ -9,7 +9,7 @@ import logging
 ### SIMPLE BOT ### 
 # NOT READY FOR DEPLOYMENT #
 
-desired_timezone = pytz.timezone('Europe/Sofia')
+bulgarian_timezone = pytz.timezone('Europe/Sofia')
 
 intents = discord.Intents.all()
 intents.members = True
@@ -47,6 +47,7 @@ rate_limit_file_handler.setFormatter(rate_limit_formatter)
 
 rate_limit_logger.addHandler(rate_limit_file_handler)
 
+### log_to_discord ###
 async def log_to_discord(channel_id, message):
     channel = bot.get_channel(channel_id)
     if channel:
@@ -56,6 +57,7 @@ async def log_to_discord(channel_id, message):
 async def test(ctx):
     bot_logger.warning("test")
     
+### on_ready ###
 @bot.event
 async def on_ready():
     await log_to_discord(log_channel_id, f'Logged in as {bot.user.name} ({bot.user.id})')
@@ -63,7 +65,7 @@ async def on_ready():
     update_time.start()
     await send_alive_message()
 
-                
+### send_alive_message ###               
 async def send_alive_message():
     await bot.wait_until_ready()
     guild = bot.get_guild(1038062520512040993)
@@ -79,6 +81,7 @@ async def send_alive_message():
 
         await asyncio.sleep(600)
 
+### lockdown ###
 @bot.command()
 async def lockdown(ctx):
     if ctx.author.guild_permissions.administrator:
@@ -98,6 +101,7 @@ async def lockdown(ctx):
     else:
         await log_to_discord(log_channel_id, "Only the server owner can use this command to lock down the server.")
 
+### unlockdown ###
 @bot.command()
 async def unlockdown(ctx):
     if ctx.author.guild_permissions.administrator:
@@ -118,6 +122,7 @@ async def unlockdown(ctx):
     else:
         await log_to_discord(log_channel_id, "Only the server owner can use this command to unlockdown the server.")
 
+### on_voice_state_update ###
 @bot.event
 async def on_voice_state_update(member, before, after):
     if before.channel != after.channel:
@@ -129,9 +134,12 @@ async def on_voice_state_update(member, before, after):
             log_message = f"{member.name} left {before.channel.name}"
 
         if log_message:
-            log_message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {log_message}"
-            await log_to_discord(log_channel_id, log_message)  
-                  
+            current_time = datetime.datetime.now(bulgarian_timezone)
+            formatted_time = current_time.strftime('%Y-%m-%d %H:%M:%S')
+
+            log_message = f"{formatted_time} - {log_message}"
+            await log_to_discord(log_channel_id, log_message)
+
 @bot.event
 async def on_message_delete(message):
     if message.attachments:
@@ -144,9 +152,10 @@ async def on_message_delete(message):
         await log_to_discord(log_channel_id, log_message) 
 
 
+### update_date ###
 @tasks.loop(hours=24) 
 async def update_date():
-    current_datetime = datetime.now(desired_timezone)
+    current_datetime = datetime.now(bulgarian_timezone)
 
     days_mapping = {"Monday": "Понеделник", "Tuesday": "Вторник", "Wednesday": "Сряда", "Thursday": "Четвъртък",
                     "Friday": "Петък", "Saturday": "Събота", "Sunday": "Неделя"}
@@ -161,6 +170,7 @@ async def update_date():
         english_day = current_datetime.strftime('%A')
         english_month = current_datetime.strftime('%B')
         year = current_datetime.year
+        day = current_datetime.strftime('%d')
 
         bulgarian_day = days_mapping.get(english_day, english_day)
         bulgarian_month = months_mapping.get(english_month, english_month)
@@ -168,7 +178,7 @@ async def update_date():
         if bulgarian_month in ["Септември", "Октомври", "Ноември", "Декември"]:
             bulgarian_month = bulgarian_month[:4]
 
-        new_name_date = f"{bulgarian_day}, {bulgarian_month} {year}г"
+        new_name_date = f"{bulgarian_day}, {bulgarian_month} {day} {year}г"
 
         try:
             await voice_channel_date.edit(name=new_name_date)
@@ -177,11 +187,11 @@ async def update_date():
             log_message = 'Rate limit exceeded while updating date channel name. Waiting...' if "rate limited" in str(e).lower() else f'Error updating date channel name: {e}'
             rate_limit_logger.warning(log_message)
 
-
+### update_time ###
 @tasks.loop(minutes=5)
 async def update_time():
     try:
-        current_time = datetime.now(desired_timezone).strftime("%H:%M")
+        current_time = datetime.now(bulgarian_timezone).strftime("%H:%M")
 
         voice_channel_time = bot.get_channel(voice_channel_id_time)
 
