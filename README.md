@@ -6,3 +6,9 @@
 ![Discord.py Version](https://img.shields.io/badge/discord.py-2.3.2-blue.svg)
 
 Basic functionality: lockdown server and unlockdown, server timer(date and time) and deleted messages(text and photos)
+
+**V0.0.6 added:**
+- separate log files for methods: update_time; update_date
+- sample $test command with output in log.txt
+
+TODO: Music with local file upload. Support for mp3 and ogg file formats
