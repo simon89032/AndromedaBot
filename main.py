@@ -18,6 +18,8 @@ intents.presences = False
 
 bot = commands.Bot(command_prefix='$', intents=intents)
 
+#test
+
 voice_channel_id_time = 1147642751337377963
 voice_channel_id_date = 1147635201145589941
 log_channel_id = 1148562977272905761
