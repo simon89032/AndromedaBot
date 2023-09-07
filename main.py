@@ -145,13 +145,44 @@ async def on_message_delete(message):
     if message.attachments:
         for attachment in message.attachments:
             log_message = f"Deleted Image from {message.author}: {attachment.url}"
-            await log_to_discord(log_channel_id, log_message) 
+            #await log_to_discord(log_channel_id, log_message) 
 
     if message.content:
         log_message = f"Deleted Message from {message.author}: {message.content}"
-        await log_to_discord(log_channel_id, log_message) 
+        #await log_to_discord(log_channel_id, log_message) 
 
+### clear messages ###
+@bot.command()
+async def clear(ctx, *, input_value=None):
+    try:
+        amount = int(input_value)
+    except (ValueError, TypeError):
+        embed = discord.Embed(
+            description="Please specify a valid positive number of messages to delete.",
+            color=discord.Colour.red()
+        )
+        await ctx.send(embed=embed)
+        return
 
+    if amount <= 0:
+        embed = discord.Embed(
+            description="Please specify a valid positive number of messages to delete.",
+            color=discord.Colour.red()
+        )
+        await ctx.send(embed=embed)
+        return
+
+    await ctx.channel.purge(limit=amount + 1)
+    cleared_message = f'**{amount}** messages have been cleared!'
+    embed = discord.Embed(
+        description=cleared_message,
+        color=discord.Colour.orange()
+    )
+    cleared_msg = await ctx.send(embed=embed)
+
+    await asyncio.sleep(5)
+    await cleared_msg.delete()
+    
 ### update_date ###
 @tasks.loop(hours=24) 
 async def update_date():
@@ -218,7 +249,7 @@ async def before_update_time():
     await bot.wait_until_ready()
 
 async def main():
-    await bot.start("MTE0NjY3NDA2MDIyNzUzMDc2Mg.GCO_Vk.9BB5fQ6gKquZsVKNHLv7nwKYNpIbdrgfC00dUQ") # Simple Bot
+    await bot.start("MTE0NjY3NDA2MDIyNzUzMDc2Mg.GWHroL.vGJ_rdA37CNIS4WAANgTM1ewtNi7W7KUiUCmVs") # Simple Bot
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()

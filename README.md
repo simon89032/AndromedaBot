@@ -7,6 +7,9 @@
 
 Basic functionality: lockdown server and unlockdown, server timer(date and time) and deleted messages(text and photos)
 
+**V0.1.0**:
+- added clear messages with embed and timer
+
 **V0.0.9**:
 - added the day of the month in the date_channel
 - added some comments
