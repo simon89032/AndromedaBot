@@ -7,8 +7,10 @@
 
 Basic functionality: lockdown server and unlockdown, server timer(date and time) and deleted messages(text and photos)
 
-**V0.1.0a**:
+**V0.1.1**:
 - added clear messages with embed and timer
+- fixed voice state update
+- removed print for bot is alive
 
 **V0.0.9**:
 - added the day of the month in the date_channel

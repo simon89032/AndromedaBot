@@ -136,11 +136,8 @@ async def on_voice_state_update(member, before, after):
             log_message = f"{member.name} left {before.channel.name}"
 
         if log_message:
-            current_time = datetime.datetime.now(bulgarian_timezone)
-            formatted_time = current_time.strftime('%Y-%m-%d %H:%M:%S')
-
-            log_message = f"{formatted_time} - {log_message}"
-            await log_to_discord(log_channel_id, log_message)
+            log_message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {log_message}"
+            await log_to_discord(log_channel_id, log_message) 
 
 @bot.event
 async def on_message_delete(message):
@@ -251,7 +248,7 @@ async def before_update_time():
     await bot.wait_until_ready()
 
 async def main():
-    await bot.start("MTE0NjY3NDA2MDIyNzUzMDc2Mg.GWHroL.vGJ_rdA37CNIS4WAANgTM1ewtNi7W7KUiUCmVs") # Simple Bot
+    await bot.start("MTE0NjY3NDA2MDIyNzUzMDc2Mg.GTfUy4.59gZ4wF0Fg0R6HLx6ejYvSBPe6EYHW0Qe1Ly2s") # Simple Bot
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
