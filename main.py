@@ -65,23 +65,6 @@ async def on_ready():
     await log_to_discord(log_channel_id, f'Logged in as {bot.user.name} ({bot.user.id})')
     update_date.start()
     update_time.start()
-    await send_alive_message()
-
-### send_alive_message ###               
-async def send_alive_message():
-    await bot.wait_until_ready()
-    guild = bot.get_guild(1038062520512040993)
-    channel = guild.get_channel(log_channel_id)
-
-    while True:
-        response = requests.get("https://andromeda.simeonmladenov.repl.co/")
-
-        if response.status_code == 200:
-            await channel.send("Bot is alive bitch!")
-        else:
-            await channel.send("Bot may not be running.")
-
-        await asyncio.sleep(600)
 
 ### lockdown ###
 @bot.command()
