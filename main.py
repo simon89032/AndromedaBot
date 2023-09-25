@@ -54,10 +54,6 @@ async def log_to_discord(channel_id, message):
     channel = bot.get_channel(channel_id)
     if channel:
         await channel.send(message)
-
-@bot.command()
-async def test(ctx):
-    bot_logger.warning("test")
     
 ### on_ready ###
 @bot.event
@@ -106,21 +102,6 @@ async def unlockdown(ctx):
         await log_to_discord(log_channel_id,"Server is unlocked. Permissions are reverted back.")
     else:
         await log_to_discord(log_channel_id, "Only the server owner can use this command to unlockdown the server.")
-
-### on_voice_state_update ###
-@bot.event
-async def on_voice_state_update(member, before, after):
-    if before.channel != after.channel:
-        log_message = None
-
-        if after.channel:
-            log_message = f"{member.name} joined {after.channel.name}"
-        if before.channel:
-            log_message = f"{member.name} left {before.channel.name}"
-
-        if log_message:
-            log_message = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {log_message}"
-            await log_to_discord(log_channel_id, log_message) 
 
 @bot.event
 async def on_message_delete(message):
